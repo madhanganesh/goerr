@@ -20,11 +20,11 @@ type errorEx struct {
 	frames  []StackFrame
 }
 
-func NewErr(err error, message ...any) error {
+func New(nested error, message ...any) error {
 	msg := "error"
 
-	if err != nil {
-		msg = err.Error()
+	if nested != nil {
+		msg = nested.Error()
 	}
 	if len(message) == 1 {
 		msg = message[0].(string)
@@ -43,7 +43,7 @@ func NewErr(err error, message ...any) error {
 	}
 
 	return &errorEx{
-		err:     err,
+		err:     nested,
 		message: msg,
 		stack:   stack[:length],
 		frames:  frames,
