@@ -1,8 +1,6 @@
 package goerr
 
 import (
-	//"errors"
-
 	"bufio"
 	"bytes"
 	"fmt"
@@ -52,7 +50,8 @@ func New(nested error, message ...any) error {
 }
 
 func (e *errorEx) Error() string {
-	return fmt.Sprintf("%s (%s:%d)\n", e.message, e.frames[0].File, e.frames[0].LineNumber)
+	//return fmt.Sprintf("%s (%s:%d)\n", e.message, e.frames[0].File, e.frames[0].LineNumber)
+	return e.message
 }
 
 // A StackFrame contains all necessary information about to generate a line
@@ -167,15 +166,39 @@ func packageAndName(fn *runtime.Func) (string, string) {
 	return pkg, name
 }
 
-func Stack(err error) []string {
-	result := []string{err.Error()}
-	errEx, ok := err.(*errorEx)
+func ListStacks(err error) []string {
+	var result []string
+	e, ok := err.(*errorEx)
 	if !ok {
+		result = append(result, err.Error())
 		return result
 	}
-	if errEx.err == nil {
+	packageParts := strings.Split(e.frames[0].Func().Name(), "/")
+	funcName := packageParts[len(packageParts)-1]
+	result = append(result, fmt.Sprintf("%s [%s:%d (%s)]", e.message, e.frames[0].File, e.frames[0].LineNumber, funcName))
+	if e.err == nil {
 		return result
 	}
 
-	return append(result, Stack(errEx.err)...)
+	return append(result, ListStacks(e.err)...)
+}
+
+func Stack(err error) string {
+	stacks := ListStacks(err)
+	if len(stacks) == 0 {
+		return ""
+	}
+	if len(stacks) == 1 {
+		return stacks[0]
+	}
+
+	var stack string
+	for i, line := range stacks {
+		stack += "\n"
+		for j := 0; j < i; j++ {
+			stack += "\t"
+		}
+		stack += line
+	}
+	return stack
 }
